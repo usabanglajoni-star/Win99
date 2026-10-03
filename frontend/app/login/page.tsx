@@ -34,15 +34,18 @@ export default function LoginPage() {
         console.error('Supabase Login Error:', supabaseError);
         setError(supabaseError.message || 'ইউজারনেম অথবা পাসওয়ার্ড ভুল হয়েছে!');
       } else if (data?.user) {
-        // লগইন সফল হলে সরাসরি রিডাইরেক্ট হবে
-        window.location.href = '/dashboard'; 
+        window.location.href = '/dashboard';
       } else {
         setError('লগইন করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Catch Error:', err);
-      setError(err?.message || 'একটি সমস্যা দেখা দিয়েছে। আবার চেষ্টা করুন।');
-    } finally {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('একটি সমস্যা দেখা দিয়েছে। আবার চেষ্টা করুন।');
+      }
+    } fontally {
       setIsLoading(false);
     }
   };
@@ -64,7 +67,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Website Category & Gaming Badges */}
+      {/* Badges */}
       <div className="w-full max-w-md mb-5 text-center">
         <div className="flex justify-center items-center gap-2 flex-wrap mb-2">
           <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
@@ -77,8 +80,7 @@ export default function LoginPage() {
             🃏 স্লট গেম
           </span>
         </div>
-        
-        {/* Welcome Banner */}
+
         <div className="bg-gradient-to-r from-green-950/80 via-emerald-900/40 to-green-950/80 border border-green-500/30 rounded-2xl p-3 shadow-lg shadow-green-900/20">
           <p className="text-xs text-green-400 font-semibold uppercase tracking-widest">পুনরায় স্বাগতম</p>
           <p className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-white to-amber-400">
