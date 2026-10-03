@@ -37,7 +37,9 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const formattedEmail = `${formData.username.toLowerCase().trim()}@win99.com`;
+      // স্পেস সরিয়ে সঠিক ইমেইল ফরম্যাট তৈরি করা হচ্ছে
+      const cleanUsername = formData.username.toLowerCase().replace(/\s+/g, '');
+      const formattedEmail = `${cleanUsername}@win99.com`;
 
       const { data, error: supabaseError } = await supabase.auth.signUp({
         email: formattedEmail,
