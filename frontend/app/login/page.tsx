@@ -45,7 +45,7 @@ export default function LoginPage() {
       } else {
         setError('একটি সমস্যা দেখা দিয়েছে। আবার চেষ্টা করুন।');
       }
-    } fontally {
+    } finally {
       setIsLoading(false);
     }
   };
