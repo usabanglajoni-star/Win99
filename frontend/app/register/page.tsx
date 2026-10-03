@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -37,7 +37,6 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Phone specific format for email requirement in Supabase Auth
       const formattedEmail = `${formData.username.toLowerCase().trim()}@win99.com`;
 
       const { data, error: supabaseError } = await supabase.auth.signUp({
@@ -82,7 +81,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* Hero Wheel Icon Placeholder */}
+      {/* Hero Wheel Icon */}
       <div className="relative mb-6 flex justify-center">
         <div className="w-40 h-40 rounded-full border-4 border-green-500/30 flex items-center justify-center bg-gradient-to-b from-green-900/40 to-black shadow-[0_0_50px_rgba(34,197,94,0.3)]">
           <span className="text-6xl">🎰</span>
