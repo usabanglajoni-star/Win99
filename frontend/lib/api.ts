@@ -1,7 +1,12 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const api = {
-  // Auth endpoints
+  // Auth endpoints (Supabase Auth)
   auth: {
     register: async (userData: {
       username: string;
@@ -11,216 +16,265 @@ export const api = {
       lastName?: string;
       dateOfBirth?: string;
     }) => {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            username: userData.username,
+            first_name: userData.firstName,
+            last_name: userData.lastName,
+            date_of_birth: userData.dateOfBirth,
+          },
+        },
       });
-      return response.json();
+      if (error) return { error: error.message };
+      return { user: data.user, session: data.session };
     },
 
-    login: async (credentials: { email: string; password: string; twoFactorCode?: string }) => {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
+    login: async (credentials: { email: string; password: string }) => {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
       });
-      return response.json();
-    },
-
-    verifyEmail: async (token: string) => {
-      const response = await fetch(`${API_BASE_URL}/auth/verify/${token}`);
-      return response.json();
+      if (error) return { error: error.message };
+      return { user: data.user, token: data.session?.access_token };
     },
 
     resendVerification: async (email: string) => {
-      const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
       });
-      return response.json();
+      if (error) return { error: error.message };
+      return { message: 'Verification email resent' };
     },
 
     forgotPassword: async (email: string) => {
-      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      return response.json();
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) return { error: error.message };
+      return { message: 'Password reset link sent' };
     },
 
-    resetPassword: async (token: string, newPassword: string) => {
-      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, newPassword }),
-      });
-      return response.json();
-    },
-
-    setup2FA: async (token: string) => {
-      const response = await fetch(`${API_BASE_URL}/auth/2fa/setup`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-      });
-      return response.json();
-    },
-
-    verify2FA: async (token: string, code: string) => {
-      const response = await fetch(`${API_BASE_URL}/auth/2fa/verify`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ token: code }),
-      });
-      return response.json();
-    },
-
-    disable2FA: async (token: string, password: string) => {
-      const response = await fetch(`${API_BASE_URL}/auth/2fa/disable`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ password }),
-      });
-      return response.json();
-    },
-
-    get2FAStatus: async (token: string) => {
-      const response = await fetch(`${API_BASE_URL}/auth/2fa/status`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.json();
+    resetPassword: async (newPassword: string) => {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { error: error.message };
+      return { message: 'Password updated successfully' };
     },
   },
 
-  // Games endpoints
+  // Games endpoints (Supabase Games Table)
   games: {
     getAll: async (params?: { category?: string; search?: string; provider?: string }) => {
-      const query = new URLSearchParams(params as Record<string, string>).toString();
-      const response = await fetch(`${API_BASE_URL}/games${query ? `?${query}` : ''}`);
-      return response.json();
+      let query = supabase.from('games').select('*');
+
+      if (params?.category) {
+        query = query.eq('category', params.category);
+      }
+      if (params?.provider) {
+        query = query.eq('provider', params.provider);
+      }
+      if (params?.search) {
+        query = query.ilike('title', `%${params.search}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('Error fetching games:', error);
+        return [];
+      }
+
+      // MongoDB format compatibility mapping
+      return (data || []).map((game) => ({
+        ...game,
+        _id: game.id,
+        minBet: game.min_bet,
+        maxBet: game.max_bet,
+        hasJackpot: game.has_jackpot,
+        jackpotAmount: game.jackpot_amount,
+        demoAvailable: game.demo_available,
+        launchUrl: game.launch_url,
+        isPopular: game.is_popular,
+        isNew: game.is_new,
+        isFeatured: game.is_featured,
+      }));
     },
 
     getBySlug: async (slug: string) => {
-      const response = await fetch(`${API_BASE_URL}/games/${slug}`);
-      return response.json();
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('slug', slug)
+        .single();
+
+      if (error || !data) return null;
+
+      return {
+        ...data,
+        _id: data.id,
+        minBet: data.min_bet,
+        maxBet: data.max_bet,
+        hasJackpot: data.has_jackpot,
+        jackpotAmount: data.jackpot_amount,
+        demoAvailable: data.demo_available,
+        launchUrl: data.launch_url,
+        isPopular: data.is_popular,
+        isNew: data.is_new,
+        isFeatured: data.is_featured,
+      };
     },
 
     getJackpots: async () => {
-      const response = await fetch(`${API_BASE_URL}/games/jackpots`);
-      return response.json();
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('has_jackpot', true);
+
+      if (error) return [];
+      return data || [];
     },
 
-    // 🚀 নতুন যোগ করা হয়েছে: গেম লঞ্চ করার API রিকোয়েস্ট (Game Provider URL আনবে)
-    launchGame: async (gameId: string, mode: 'real' | 'demo', token?: string) => {
-      const response = await fetch(`${API_BASE_URL}/games/launch`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({ gameId, mode }),
-      });
-      return response.json();
+    launchGame: async (gameId: string, mode: 'real' | 'demo') => {
+      const { data, error } = await supabase
+        .from('games')
+        .select('launch_url, thumbnail')
+        .eq('id', gameId)
+        .single();
+
+      if (error || !data) return { url: '' };
+      return { url: data.launch_url || data.thumbnail };
     },
   },
 
   // Promotions endpoints
   promotions: {
     getAll: async (params?: { type?: string; isActive?: boolean }) => {
-      const query = new URLSearchParams(params as Record<string, string>).toString();
-      const response = await fetch(`${API_BASE_URL}/promotions${query ? `?${query}` : ''}`);
-      return response.json();
+      let query = supabase.from('promotions').select('*');
+
+      if (params?.type) {
+        query = query.eq('type', params.type);
+      }
+      if (params?.isActive !== undefined) {
+        query = query.eq('is_active', params.isActive);
+      }
+
+      const { data, error } = await query;
+      if (error) return [];
+      return data || [];
     },
 
     getBySlug: async (slug: string) => {
-      const response = await fetch(`${API_BASE_URL}/promotions/${slug}`);
-      return response.json();
+      const { data, error } = await supabase
+        .from('promotions')
+        .select('*')
+        .eq('slug', slug)
+        .single();
+
+      if (error) return null;
+      return data;
     },
   },
 
   // Transactions endpoints
   transactions: {
-    getAll: async (token: string) => {
-      const response = await fetch(`${API_BASE_URL}/transactions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.json();
+    getAll: async (userId: string) => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) return [];
+      return data || [];
     },
 
-    deposit: async (token: string, data: { amount: number; paymentMethod: string }) => {
-      const response = await fetch(`${API_BASE_URL}/transactions/deposit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+    deposit: async (userId: string, data: { amount: number; paymentMethod: string }) => {
+      const { data: res, error } = await supabase.from('transactions').insert([
+        {
+          user_id: userId,
+          type: 'deposit',
+          amount: data.amount,
+          payment_method: data.paymentMethod,
+          status: 'pending',
         },
-        body: JSON.stringify(data),
-      });
-      return response.json();
+      ]);
+      if (error) return { error: error.message };
+      return res;
     },
 
-    withdraw: async (token: string, data: { amount: number; paymentMethod: string }) => {
-      const response = await fetch(`${API_BASE_URL}/transactions/withdrawal`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+    withdraw: async (userId: string, data: { amount: number; paymentMethod: string }) => {
+      const { data: res, error } = await supabase.from('transactions').insert([
+        {
+          user_id: userId,
+          type: 'withdrawal',
+          amount: data.amount,
+          payment_method: data.paymentMethod,
+          status: 'pending',
         },
-        body: JSON.stringify(data),
-      });
-      return response.json();
+      ]);
+      if (error) return { error: error.message };
+      return res;
     },
   },
 
-  // User endpoints
+  // User profile & Favorites
   user: {
-    getProfile: async (token: string) => {
-      const response = await fetch(`${API_BASE_URL}/users/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.json();
+    getProfile: async (userId: string) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) return null;
+      return {
+        ...data,
+        favoriteGames: data.favorite_games || [],
+      };
     },
 
-    toggleFavorite: async (token: string, gameId: string) => {
-      const response = await fetch(`${API_BASE_URL}/users/favorites`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+    toggleFavorite: async (userId: string, gameId: string) => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('favorite_games')
+        .eq('id', userId)
+        .single();
+
+      const currentFavorites: string[] = profile?.favorite_games || [];
+      const updatedFavorites = currentFavorites.includes(gameId)
+        ? currentFavorites.filter((id) => id !== gameId)
+        : [...currentFavorites, gameId];
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ favorite_games: updatedFavorites })
+        .eq('id', userId);
+
+      if (error) return { error: error.message };
+      return { favoriteGames: updatedFavorites };
+    },
+
+    uploadKYCDocument: async (userId: string, documentType: string, documentUrl: string) => {
+      const { data, error } = await supabase.from('kyc_documents').insert([
+        {
+          user_id: userId,
+          document_type: documentType,
+          document_url: documentUrl,
+          status: 'pending',
         },
-        body: JSON.stringify({ gameId }),
-      });
-      return response.json();
+      ]);
+      if (error) return { error: error.message };
+      return data;
     },
 
-    uploadKYCDocument: async (token: string, documentType: string, documentUrl: string) => {
-      const response = await fetch(`${API_BASE_URL}/users/kyc/upload`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ documentType, documentUrl }),
-      });
-      return response.json();
-    },
+    getKYCDocuments: async (userId: string) => {
+      const { data, error } = await supabase
+        .from('kyc_documents')
+        .select('*')
+        .eq('user_id', userId);
 
-    getKYCDocuments: async (token: string) => {
-      const response = await fetch(`${API_BASE_URL}/users/kyc/documents`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.json();
+      if (error) return [];
+      return data || [];
     },
   },
 };
