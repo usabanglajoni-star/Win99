@@ -3,9 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { User } from '@supabase/supabase-js';
+
+interface Game {
+  id: string;
+  title: string;
+  provider: string;
+  slug?: string;
+  launch_url?: string;
+  thumbnail?: string;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -13,6 +21,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('hot');
   const [jackpot, setJackpot] = useState(111560365.60);
+  const [dbGames, setDbGames] = useState<Game[]>([]);
 
   // Live Jackpot Ticker Effect
   useEffect(() => {
@@ -35,6 +44,15 @@ export default function DashboardPage() {
 
     checkUser();
 
+    // Supabase theke live games load kora
+    const fetchGames = async () => {
+      const { data, error } = await supabase.from('games').select('*');
+      if (!error && data) {
+        setDbGames(data);
+      }
+    };
+    fetchGames();
+
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         router.push('/login');
@@ -53,6 +71,14 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
+  const handleGameClick = (launchUrl?: string) => {
+    if (launchUrl) {
+      window.open(launchUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      alert('গেমের লিংক পাওয়া যায়নি!');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
@@ -68,23 +94,22 @@ export default function DashboardPage() {
 
   const username = user.email ? user.email.split('@')[0] : 'Jone ali';
 
-  // Game Categories
+  // Fallback UI data if database is empty
+  const defaultGames = [
+    { id: '1', title: 'সুপার এস', provider: 'JILI', tag: 'Super Ace', image: '🎰', color: 'from-amber-500 to-red-600', launch_url: 'https://demo.jilicandies.com/' },
+    { id: '2', title: 'এভিয়েটর', provider: 'SPRIBE', tag: 'Aviator', image: '✈️', color: 'from-red-600 to-black', launch_url: 'https://spribe.co/games/aviator' },
+    { id: '3', title: 'বন্য বাউন্ডারি', provider: 'PG', tag: 'Showdown', image: '🤠', color: 'from-yellow-600 to-amber-800', launch_url: 'https://demo.jilicandies.com/' },
+    { id: '4', title: 'বক্সিং কিং', provider: 'JILI', tag: 'Boxing King', image: '🥊', color: 'from-red-700 to-blue-900', launch_url: 'https://demo.jilicandies.com/' },
+    { id: '5', title: 'সুপার এলিমেন্টস', provider: 'FC', tag: 'Super Elements', image: '🐲', color: 'from-yellow-400 to-orange-600', launch_url: 'https://demo.jilicandies.com/' },
+    { id: '6', title: 'ফরচুন জেমস', provider: 'JILI', tag: 'Fortune Gems', image: '💎', color: 'from-amber-400 to-yellow-600', launch_url: 'https://demo.jilicandies.com/' },
+  ];
+
   const categories = [
     { id: 'hot', name: 'গরম', icon: '🔥' },
     { id: 'slots', name: 'স্লট', icon: '🍒' },
-    { id: 'live', name: 'লাইভ', icon: '👩‍💼' },
+    { id: 'live', name: 'লাইভ', icon: '👩‍‍💼' },
     { id: 'fishing', name: 'ফিশিং', icon: '🐟' },
     { id: 'poker', name: 'পোকার', icon: '🎴' },
-  ];
-
-  // Games List
-  const games = [
-    { id: '1', title: 'সুপার এস', provider: 'JILI', tag: 'Super Ace', image: '🎰', color: 'from-amber-500 to-red-600' },
-    { id: '2', title: 'এভিয়েটর', provider: 'SPRIBE', tag: 'Aviator', image: '✈️', color: 'from-red-600 to-black' },
-    { id: '3', title: 'বন্য বাউন্ডারি', provider: 'PG', tag: 'Showdown', image: '🤠', color: 'from-yellow-600 to-amber-800' },
-    { id: '4', title: 'বক্সিং কিং', provider: 'JILI', tag: 'Boxing King', image: '🥊', color: 'from-red-700 to-blue-900' },
-    { id: '5', title: 'সুপার এলিমেন্টস', provider: 'FC', tag: 'Super Elements', image: '🐲', color: 'from-yellow-400 to-orange-600' },
-    { id: '6', title: 'ফরচুন জেমস', provider: 'JILI', tag: 'Fortune Gems', image: '💎', color: 'from-amber-400 to-yellow-600' },
   ];
 
   return (
@@ -113,7 +138,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Hero Banner Slider / Offer */}
+      {/* Banner */}
       <div className="px-3 pt-3">
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-950 via-emerald-900 to-black p-4 border border-green-500/30 shadow-lg">
           <div className="relative z-10 max-w-[65%]">
@@ -126,14 +151,13 @@ export default function DashboardPage() {
           <div className="absolute right-2 bottom-0 text-6xl opacity-80">📱</div>
         </div>
 
-        {/* Marquee Notice */}
         <div className="mt-2 bg-[#161616] px-3 py-1.5 rounded-xl border border-gray-800 flex items-center gap-2 text-xs text-gray-300">
           <span className="text-amber-400 text-sm">📢</span>
           <p className="truncate text-[11px] text-gray-300 font-medium">স্বাগতম WIN99.COM - সেরা অনলাইন ক্যাসিনো ও স্পোর্টস বেটিং প্লাটফর্ম!</p>
         </div>
       </div>
 
-      {/* Jackpot Section */}
+      {/* Jackpot */}
       <div className="px-3 mt-3">
         <div className="bg-gradient-to-b from-[#1f1900] to-[#0f0e00] border border-amber-500/40 rounded-2xl p-3 text-center shadow-[0_0_15px_rgba(234,179,8,0.15)] relative overflow-hidden">
           <div className="flex justify-center items-center gap-1.5 mb-1">
@@ -148,7 +172,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Category Icons Bar */}
+      {/* Categories */}
       <div className="px-3 mt-4">
         <div className="grid grid-cols-5 gap-2 bg-[#161616] p-2 rounded-2xl border border-gray-800">
           {categories.map((cat) => (
@@ -168,7 +192,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Action Navigation Bar */}
+      {/* Quick Action */}
       <div className="px-3 mt-3">
         <div className="grid grid-cols-4 gap-2 bg-[#121212] p-2 rounded-xl border border-gray-800 text-center">
           <Link href="/promotions" className="flex flex-col items-center py-1">
@@ -190,7 +214,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Game Cards Grid */}
+      {/* Games Grid (Click Handled) */}
       <div className="px-3 mt-4">
         <div className="flex justify-between items-center mb-2.5">
           <h3 className="text-sm font-black text-white flex items-center gap-1.5">
@@ -200,20 +224,25 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-2.5">
-          {games.map((game) => (
+          {(dbGames.length > 0 ? dbGames : defaultGames).map((game: any) => (
             <div
               key={game.id}
-              className="bg-[#18181c] rounded-xl border border-gray-800/80 overflow-hidden shadow-md flex flex-col justify-between group hover:border-green-500/50 transition-all cursor-pointer"
+              onClick={() => handleGameClick(game.launch_url)}
+              className="bg-[#18181c] rounded-xl border border-gray-800/80 overflow-hidden shadow-md flex flex-col justify-between group hover:border-green-500/50 transition-all cursor-pointer active:scale-95"
             >
-              <div className={`h-24 bg-gradient-to-br ${game.color} flex flex-col items-center justify-center p-2 relative`}>
-                <span className="text-4xl group-hover:scale-110 transition-transform">{game.image}</span>
+              <div className={`h-24 bg-gradient-to-br ${game.color || 'from-amber-500 to-red-600'} flex flex-col items-center justify-center p-2 relative`}>
+                {game.thumbnail && game.thumbnail.startsWith('http') ? (
+                  <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl group-hover:scale-110 transition-transform">{game.image || '🎰'}</span>
+                )}
                 <span className="absolute top-1 right-1 bg-black/60 text-amber-400 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase">
                   {game.provider}
                 </span>
               </div>
               <div className="p-2 bg-[#121214]">
                 <p className="text-[11px] font-extrabold text-white truncate">{game.title}</p>
-                <p className="text-[9px] text-gray-500 truncate">{game.tag}</p>
+                <p className="text-[9px] text-gray-500 truncate">{game.tag || game.slug}</p>
               </div>
             </div>
           ))}
@@ -283,4 +312,4 @@ export default function DashboardPage() {
       </nav>
     </div>
   );
- }
+}
