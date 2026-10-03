@@ -9,7 +9,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -20,9 +20,17 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // ইউজারনেমে স্পেস আছে কিনা চেক
+  const hasSpaceInUsername = /\s/.test(formData.username);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (hasSpaceInUsername) {
+      setError('ইউজারনেমে কোনো স্পেস দেওয়া যাবে না।');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('পাসওয়ার্ড মিলছে না');
@@ -37,8 +45,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // স্পেস সরিয়ে সঠিক ইমেইল ফরম্যাট তৈরি করা হচ্ছে
-      const cleanUsername = formData.username.toLowerCase().replace(/\s+/g, '');
+      const cleanUsername = formData.username.toLowerCase().trim();
       const formattedEmail = `${cleanUsername}@win99.com`;
 
       const { data, error: supabaseError } = await supabase.auth.signUp({
@@ -72,68 +79,100 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-start pt-6 px-4">
+    <div className="min-h-screen bg-[#0a0a0c] text-white flex flex-col items-center justify-start pt-4 px-4 pb-12 font-sans selection:bg-green-500 selection:text-black">
       {/* Header / Logo */}
-      <div className="w-full max-w-md flex justify-between items-center mb-6">
-        <button onClick={() => router.back()} className="text-white text-xl">
+      <div className="w-full max-w-md flex justify-between items-center mb-4 px-2">
+        <button onClick={() => router.back()} className="text-gray-400 hover:text-white text-xl transition-all">
           ✕
         </button>
-        <div className="flex items-center gap-1 bg-green-500 text-black px-3 py-1 rounded-full font-extrabold text-lg tracking-wider">
-          <span className="text-white">WIN</span>99
+        <div className="flex items-center gap-1 bg-gradient-to-r from-amber-400 via-green-500 to-emerald-500 text-black px-4 py-1.5 rounded-full font-black text-lg tracking-wider shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+          <span className="text-black">WIN</span>99
         </div>
       </div>
 
-      {/* Hero Wheel Icon */}
-      <div className="relative mb-6 flex justify-center">
-        <div className="w-40 h-40 rounded-full border-4 border-green-500/30 flex items-center justify-center bg-gradient-to-b from-green-900/40 to-black shadow-[0_0_50px_rgba(34,197,94,0.3)]">
-          <span className="text-6xl">🎰</span>
+      {/* Website Category & Gaming Badges */}
+      <div className="w-full max-w-md mb-5 text-center">
+        <div className="flex justify-center items-center gap-2 flex-wrap mb-2">
+          <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+            🎰 Live Casino
+          </span>
+          <span className="bg-green-500/10 border border-green-500/30 text-green-400 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+            ⚽ Sports Betting
+          </span>
+          <span className="bg-purple-500/10 border border-purple-500/30 text-purple-400 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+            🃏 Slots
+          </span>
+        </div>
+        
+        {/* Welcome Bonus Banner */}
+        <div className="bg-gradient-to-r from-green-950/80 via-emerald-900/40 to-green-950/80 border border-green-500/30 rounded-2xl p-3 shadow-lg shadow-green-900/20">
+          <p className="text-xs text-green-400 font-semibold uppercase tracking-widest">নতুন প্লেয়ার অফার</p>
+          <p className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-white to-amber-400">
+            ১০০% ওয়েলকাম বোনাস পান 🎁
+          </p>
         </div>
       </div>
 
-      {/* Main Card */}
-      <div className="w-full max-w-md bg-[#121212] rounded-t-3xl p-6 border-t border-gray-800">
-        <h1 className="text-2xl font-bold text-green-500 mb-6">নিবন্ধন</h1>
+      {/* Registration Card */}
+      <div className="w-full max-w-md bg-[#12141a] rounded-3xl p-6 border border-gray-800 shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md">
+        <div className="flex justify-between items-center mb-6 border-b border-gray-800/80 pb-3">
+          <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500">
+            নিবন্ধন করুন
+          </h1>
+          <span className="text-xs text-gray-500 bg-gray-900 px-2.5 py-1 rounded-md border border-gray-800">
+            অফিশিয়াল পোর্টাল
+          </span>
+        </div>
 
         {error && (
-          <div className="bg-red-900/40 border border-red-500 text-red-300 text-sm p-3 rounded-lg mb-4 text-center">
-            {error}
+          <div className="bg-red-950/60 border border-red-500/60 text-red-300 text-xs p-3 rounded-xl mb-4 text-center font-medium shadow-inner">
+            🚨 {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Username */}
-          <div className="relative border-b border-gray-700 pb-1">
-            <div className="flex items-center gap-3">
-              <span className="text-gray-400 text-lg">👤</span>
+          <div className="relative">
+            <label className="text-[11px] text-gray-400 ml-1 mb-1 block font-medium">ব্যবহারকারী নাম (Username)</label>
+            <div className={`flex items-center gap-3 bg-[#1a1d26] px-3.5 py-2.5 rounded-xl border transition-all ${
+              hasSpaceInUsername ? 'border-red-500/80 bg-red-950/10' : 'border-gray-800 focus-within:border-green-500'
+            }`}>
+              <span className="text-gray-400 text-base">👤</span>
               <input
                 type="text"
                 name="username"
                 required
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="ব্যবহারকারী নাম"
-                className="w-full bg-transparent text-white focus:outline-none placeholder-gray-500 text-sm py-1"
+                placeholder="যেমন: joni99"
+                className="w-full bg-transparent text-white focus:outline-none placeholder-gray-600 text-sm font-medium"
               />
             </div>
+            {hasSpaceInUsername && (
+              <p className="text-red-400 text-[11px] mt-1.5 ml-1 flex items-center gap-1 font-semibold">
+                ⚠️ ইউজারনেমে কোনো স্পেস (Space) দেওয়া যাবে না!
+              </p>
+            )}
           </div>
 
           {/* Password */}
-          <div className="relative border-b border-gray-700 pb-1">
-            <div className="flex items-center gap-3">
-              <span className="text-gray-400 text-lg">🔒</span>
+          <div className="relative">
+            <label className="text-[11px] text-gray-400 ml-1 mb-1 block font-medium">পাসওয়ার্ড</label>
+            <div className="flex items-center gap-3 bg-[#1a1d26] px-3.5 py-2.5 rounded-xl border border-gray-800 focus-within:border-green-500 transition-all">
+              <span className="text-gray-400 text-base">🔒</span>
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 required
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="পাসওয়ার্ড"
-                className="w-full bg-transparent text-white focus:outline-none placeholder-gray-500 text-sm py-1"
+                placeholder="********"
+                className="w-full bg-transparent text-white focus:outline-none placeholder-gray-600 text-sm font-medium"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-gray-400 text-sm"
+                className="text-gray-400 hover:text-white text-xs"
               >
                 {showPassword ? '👁️' : '🙈'}
               </button>
@@ -141,40 +180,44 @@ export default function RegisterPage() {
           </div>
 
           {/* Confirm Password */}
-          <div className="relative border-b border-gray-700 pb-1">
-            <div className="flex items-center gap-3">
-              <span className="text-gray-400 text-lg">🔒</span>
+          <div className="relative">
+            <label className="text-[11px] text-gray-400 ml-1 mb-1 block font-medium">পাসওয়ার্ড নিশ্চিত করুন</label>
+            <div className="flex items-center gap-3 bg-[#1a1d26] px-3.5 py-2.5 rounded-xl border border-gray-800 focus-within:border-green-500 transition-all">
+              <span className="text-gray-400 text-base">🔒</span>
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 name="confirmPassword"
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                placeholder="পাসওয়ার্ড নিশ্চিত করুন"
-                className="w-full bg-transparent text-white focus:outline-none placeholder-gray-500 text-sm py-1"
+                placeholder="********"
+                className="w-full bg-transparent text-white focus:outline-none placeholder-gray-600 text-sm font-medium"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="text-gray-400 text-sm"
+                className="text-gray-400 hover:text-white text-xs"
               >
                 {showConfirmPassword ? '👁️' : '🙈'}
               </button>
             </div>
           </div>
 
-          {/* Mobile Number */}
-          <div className="relative border-b border-gray-700 pb-1">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400 text-sm font-semibold">+880</span>
+          {/* Phone Number */}
+          <div className="relative">
+            <label className="text-[11px] text-gray-400 ml-1 mb-1 block font-medium">মোবাইল নম্বর</label>
+            <div className="flex items-center gap-2 bg-[#1a1d26] px-3.5 py-2.5 rounded-xl border border-gray-800 focus-within:border-green-500 transition-all">
+              <span className="text-green-500 text-xs font-bold bg-green-950/80 px-2 py-0.5 rounded border border-green-800/40">
+                +880
+              </span>
               <input
                 type="tel"
                 name="phone"
                 required
                 value={formData.phone}
                 onChange={handleChange}
-                placeholder="মোবাইল নম্বর"
-                className="w-full bg-transparent text-white focus:outline-none placeholder-gray-500 text-sm py-1"
+                placeholder="17XXXXXXXX"
+                className="w-full bg-transparent text-white focus:outline-none placeholder-gray-600 text-sm font-medium"
               />
             </div>
           </div>
@@ -182,42 +225,26 @@ export default function RegisterPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full mt-6 py-3 bg-gradient-to-r from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-black font-bold rounded-xl transition-all shadow-lg shadow-green-600/20 disabled:opacity-50"
+            disabled={isLoading || hasSpaceInUsername}
+            className="w-full mt-6 py-3.5 bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 hover:from-green-400 hover:to-emerald-500 text-black font-black text-base rounded-xl transition-all shadow-[0_0_25px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed uppercase tracking-wider"
           >
-            {isLoading ? 'প্রসেসিং হচ্ছে...' : 'নিবন্ধন'}
+            {isLoading ? 'প্রসেসিং হচ্ছে...' : 'নিবন্ধন করুন 🚀'}
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="relative my-6 text-center">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-800"></div>
-          </div>
-          <span className="relative px-3 bg-[#121212] text-xs text-gray-500">
-            অথবা চালিয়ে যান
-          </span>
-        </div>
-
-        {/* Google Sign In Option */}
-        <button
-          type="button"
-          onClick={() => supabase.auth.signInWithOAuth({ provider: 'google' })}
-          className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2 text-sm transition-all"
-        >
-          <span className="font-extrabold text-base">G</span> Google
-        </button>
-
-        {/* Login Link */}
-        <div className="mt-8 text-xs text-gray-400 flex justify-between items-center">
+        {/* Footer Navigation */}
+        <div className="mt-8 pt-4 border-t border-gray-800/80 text-xs text-gray-400 flex justify-between items-center">
           <div>
-            ইতিমধ্যে একটি অ্যাকাউন্ট আছে?{' '}
-            <Link href="/login" className="text-green-500 underline font-semibold ml-1">
+            অ্যাকাউন্ট আছে?{' '}
+            <Link href="/login" className="text-green-400 hover:text-green-300 font-bold underline ml-1">
               লগইন
             </Link>
           </div>
-          <a href="#" className="flex items-center gap-1 text-green-500 bg-green-950/60 px-3 py-1.5 rounded-full border border-green-800/50">
-            🎧 সেবা
+          <a
+            href="#"
+            className="flex items-center gap-1.5 text-green-400 bg-green-950/40 hover:bg-green-900/60 px-3 py-1.5 rounded-full border border-green-800/50 transition-all font-semibold"
+          >
+            🎧 লাইভ সাপোর্ট
           </a>
         </div>
       </div>
