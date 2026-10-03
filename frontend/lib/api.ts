@@ -105,7 +105,7 @@ export const api = {
 
   // Games endpoints
   games: {
-    getAll: async (params?: { category?: string; search?: string }) => {
+    getAll: async (params?: { category?: string; search?: string; provider?: string }) => {
       const query = new URLSearchParams(params as Record<string, string>).toString();
       const response = await fetch(`${API_BASE_URL}/games${query ? `?${query}` : ''}`);
       return response.json();
@@ -118,6 +118,19 @@ export const api = {
 
     getJackpots: async () => {
       const response = await fetch(`${API_BASE_URL}/games/jackpots`);
+      return response.json();
+    },
+
+    // 🚀 নতুন যোগ করা হয়েছে: গেম লঞ্চ করার API রিকোয়েস্ট (Game Provider URL আনবে)
+    launchGame: async (gameId: string, mode: 'real' | 'demo', token?: string) => {
+      const response = await fetch(`${API_BASE_URL}/games/launch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ gameId, mode }),
+      });
       return response.json();
     },
   },
