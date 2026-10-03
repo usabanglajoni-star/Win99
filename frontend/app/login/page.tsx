@@ -1,33 +1,20 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth-context';
-import { api } from '@/lib/api';
+import { supabase } from '../../lib/supabase';
 
-function LoginForm() {
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: '',
   });
-  const [twoFactorCode, setTwoFactorCode] = useState('');
-  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showVerificationNotice, setShowVerificationNotice] = useState(false);
-
-  useEffect(() => {
-    // Check if user just registered
-    const registered = searchParams.get('registered');
-    const verify = searchParams.get('verify');
-    if (registered === 'true' && verify === 'pending') {
-      setShowVerificationNotice(true);
-    }
-  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,189 +22,153 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      const credentials = requiresTwoFactor
-        ? { ...formData, twoFactorCode }
-        : formData;
-      const response = await api.auth.login(credentials);
+      const cleanUsername = formData.username.toLowerCase().trim();
+      const formattedEmail = `${cleanUsername}@win99.com`;
 
-      if (response.requiresTwoFactor) {
-        setRequiresTwoFactor(true);
-      } else if (response.token) {
-        login(response.token, response.user);
+      const { data, error: supabaseError } = await supabase.auth.signInWithPassword({
+        email: formattedEmail,
+        password: formData.password,
+      });
+
+      if (supabaseError) {
+        setError('ইউজারনেম অথবা পাসওয়ার্ড ভুল হয়েছে!');
+      } else if (data?.user) {
         router.push('/dashboard');
       } else {
-        setError(response.message || 'Login failed');
+        setError('লগইন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
       }
     } catch {
-      setError('An error occurred during login');
+      setError('একটি সমস্যা দেখা দিয়েছে।');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 py-16 px-4">
-      <div className="container mx-auto max-w-md">
-        <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-purple-500/20">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">Welcome Back!</h1>
-            <p className="text-gray-300">Login to your Cassanova account</p>
-          </div>
-
-          {/* Verification Notice */}
-          {showVerificationNotice && (
-            <div className="bg-blue-500/20 border border-blue-500 text-blue-200 px-4 py-3 rounded-lg mb-6">
-              <p className="font-semibold mb-1">Registration Successful!</p>
-              <p className="text-sm">
-                Please check your email to verify your account. You may need to check your spam folder.
-              </p>
-            </div>
-          )}
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded-lg mb-6">
-              {error}
-            </div>
-          )}
-
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {requiresTwoFactor ? (
-              <div>
-                <div className="bg-blue-500/20 border border-blue-500 text-blue-200 px-4 py-3 rounded-lg mb-4">
-                  <p className="font-semibold mb-1">Two-Factor Authentication Required</p>
-                  <p className="text-sm">Enter the 6-digit code from your authenticator app or a backup code.</p>
-                </div>
-                <label htmlFor="twoFactorCode" className="block text-sm font-medium text-gray-300 mb-2">
-                  Authentication Code
-                </label>
-                <input
-                  id="twoFactorCode"
-                  name="twoFactorCode"
-                  type="text"
-                  required
-                  autoComplete="one-time-code"
-                  value={twoFactorCode}
-                  onChange={(e) => setTwoFactorCode(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all tracking-widest text-center text-xl"
-                  placeholder="000000"
-                  maxLength={8}
-                />
-              </div>
-            ) : (
-              <>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all"
-                    placeholder="Enter your email"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all"
-                    placeholder="Enter your password"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-yellow-400 focus:ring-yellow-400"
-                    />
-                    <span className="ml-2 text-sm text-gray-300">Remember me</span>
-                  </label>
-                  <Link href="/forgot-password" className="text-sm text-yellow-400 hover:text-yellow-300">
-                    Forgot password?
-                  </Link>
-                </div>
-              </>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 font-bold rounded-lg hover:from-yellow-500 hover:to-yellow-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              {isLoading ? 'Logging in...' : requiresTwoFactor ? 'Verify Code' : 'Login'}
-            </button>
-
-            {requiresTwoFactor && (
-              <button
-                type="button"
-                onClick={() => { setRequiresTwoFactor(false); setTwoFactorCode(''); setError(''); }}
-                className="w-full py-2 px-4 text-gray-400 hover:text-gray-200 text-sm transition-all"
-              >
-                ← Back to login
-              </button>
-            )}
-          </form>
-
-          {/* Divider */}
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-600"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-800/50 text-gray-400">or</span>
-            </div>
-          </div>
-
-          {/* Register Link */}
-          <div className="text-center">
-            <p className="text-gray-300">
-              Don&apos;t have an account?{' '}
-              <Link href="/register" className="text-yellow-400 hover:text-yellow-300 font-semibold">
-                Sign up now
-              </Link>
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#0a0a0c] text-white flex flex-col items-center justify-start pt-4 px-4 pb-12 font-sans selection:bg-green-500 selection:text-black">
+      {/* Header / Logo */}
+      <div className="w-full max-w-md flex justify-between items-center mb-4 px-2">
+        <button onClick={() => router.back()} className="text-gray-400 hover:text-white text-xl transition-all">
+          ✕
+        </button>
+        <div className="flex items-center gap-1 bg-gradient-to-r from-amber-400 via-green-500 to-emerald-500 text-black px-4 py-1.5 rounded-full font-black text-lg tracking-wider shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+          <span className="text-black">WIN</span>99
         </div>
+      </div>
 
-        {/* Responsible Gaming Notice */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-400">
-            🔞 Must be 18+ to play. Please gamble responsibly.
+      {/* Website Category & Gaming Badges */}
+      <div className="w-full max-w-md mb-5 text-center">
+        <div className="flex justify-center items-center gap-2 flex-wrap mb-2">
+          <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+            🎰 লাইভ ক্যাসিনো
+          </span>
+          <span className="bg-green-500/10 border border-green-500/30 text-green-400 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+            ⚽ স্পোর্টস বেটিং
+          </span>
+          <span className="bg-purple-500/10 border border-purple-500/30 text-purple-400 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+            🃏 স্লট গেম
+          </span>
+        </div>
+        
+        {/* Welcome Banner */}
+        <div className="bg-gradient-to-r from-green-950/80 via-emerald-900/40 to-green-950/80 border border-green-500/30 rounded-2xl p-3 shadow-lg shadow-green-900/20">
+          <p className="text-xs text-green-400 font-semibold uppercase tracking-widest">পুনরায় স্বাগতম</p>
+          <p className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-white to-amber-400">
+            আপনার অ্যাকাউন্টে লগইন করুন 🔑
           </p>
         </div>
       </div>
-    </div>
-  );
-}
 
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 py-16 px-4 flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+      {/* Login Card */}
+      <div className="w-full max-w-md bg-[#12141a] rounded-3xl p-6 border border-gray-800 shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md">
+        <div className="flex justify-between items-center mb-6 border-b border-gray-800/80 pb-3">
+          <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500">
+            লগইন করুন
+          </h1>
+          <span className="text-xs text-gray-500 bg-gray-900 px-2.5 py-1 rounded-md border border-gray-800">
+            অফিশিয়াল পোর্টাল
+          </span>
+        </div>
+
+        {error && (
+          <div className="bg-red-950/60 border border-red-500/60 text-red-300 text-xs p-3 rounded-xl mb-4 text-center font-medium shadow-inner">
+            🚨 {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Username */}
+          <div className="relative">
+            <label className="text-[11px] text-gray-400 ml-1 mb-1 block font-medium">ব্যবহারকারী নাম (Username)</label>
+            <div className="flex items-center gap-3 bg-[#1a1d26] px-3.5 py-2.5 rounded-xl border border-gray-800 focus-within:border-green-500 transition-all">
+              <span className="text-gray-400 text-base">👤</span>
+              <input
+                type="text"
+                name="username"
+                required
+                value={formData.username}
+                onChange={handleChange}
+                placeholder="যেমন: joni99"
+                className="w-full bg-transparent text-white focus:outline-none placeholder-gray-600 text-sm font-medium"
+              />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className="relative">
+            <label className="text-[11px] text-gray-400 ml-1 mb-1 block font-medium">পাসওয়ার্ড</label>
+            <div className="flex items-center gap-3 bg-[#1a1d26] px-3.5 py-2.5 rounded-xl border border-gray-800 focus-within:border-green-500 transition-all">
+              <span className="text-gray-400 text-base">🔒</span>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                required
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="********"
+                className="w-full bg-transparent text-white focus:outline-none placeholder-gray-600 text-sm font-medium"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-gray-400 hover:text-white text-xs"
+              >
+                {showPassword ? '👁️' : '🙈'}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full mt-6 py-3.5 bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 hover:from-green-400 hover:to-emerald-500 text-black font-black text-base rounded-xl transition-all shadow-[0_0_25px_rgba(34,197,94,0.3)] disabled:opacity-40 uppercase tracking-wider"
+          >
+            {isLoading ? 'প্রসেসিং হচ্ছে...' : 'লগইন করুন 🚀'}
+          </button>
+        </form>
+
+        {/* Footer Navigation */}
+        <div className="mt-8 pt-4 border-t border-gray-800/80 text-xs text-gray-400 flex justify-between items-center">
+          <div>
+            অ্যাকোউন্ট নেই?{' '}
+            <Link href="/register" className="text-green-400 hover:text-green-300 font-bold underline ml-1">
+              নিবন্ধন করুন
+            </Link>
+          </div>
+          <a
+            href="#"
+            className="flex items-center gap-1.5 text-green-400 bg-green-950/40 hover:bg-green-900/60 px-3 py-1.5 rounded-full border border-green-800/50 transition-all font-semibold"
+          >
+            🎧 লাইভ সাপোর্ট
+          </a>
+        </div>
       </div>
-    }>
-      <LoginForm />
-    </Suspense>
+    </div>
   );
 }
