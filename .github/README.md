@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎰 Cassanova Casino
+# 🎰 win99 Casino
 
 ### Modern Full-Stack Online Casino Platform
 
@@ -23,7 +23,7 @@
 
 ## 📖 About
 
-**Cassanova Casino** is a cutting-edge, full-stack online casino platform designed as a demonstration of modern web development practices. Built with the latest technologies including Next.js 15, React 19, and MongoDB, this project showcases a complete casino website implementation with a professional UI/UX, robust backend API, and comprehensive feature set.
+**win99 Casino** is a cutting-edge, full-stack online casino platform designed as a demonstration of modern web development practices. Built with the latest technologies including Next.js 15, React 19, and MongoDB, this project showcases a complete casino website implementation with a professional UI/UX, robust backend API, and comprehensive feature set.
 
 > **⚠️ Important Note**: This is a demonstration project for educational purposes. For production deployment, ensure proper gaming licenses, payment integrations, and regulatory compliance.
 
