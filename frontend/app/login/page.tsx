@@ -31,14 +31,17 @@ export default function LoginPage() {
       });
 
       if (supabaseError) {
-        setError('ইউজারনেম অথবা পাসওয়ার্ড ভুল হয়েছে!');
+        console.error('Supabase Login Error:', supabaseError);
+        setError(supabaseError.message || 'ইউজারনেম অথবা পাসওয়ার্ড ভুল হয়েছে!');
       } else if (data?.user) {
-        router.push('/dashboard');
+        // লগইন সফল হলে সরাসরি রিডাইরেক্ট হবে
+        window.location.href = '/dashboard'; 
       } else {
-        setError('লগইন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
+        setError('লগইন করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
       }
-    } catch {
-      setError('একটি সমস্যা দেখা দিয়েছে।');
+    } catch (err: any) {
+      console.error('Catch Error:', err);
+      setError(err?.message || 'একটি সমস্যা দেখা দিয়েছে। আবার চেষ্টা করুন।');
     } finally {
       setIsLoading(false);
     }
